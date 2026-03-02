@@ -1,0 +1,5 @@
+{
+  "name": "每日英语口语 (Daily English Speaker)",
+  "description": "A daily English speaking practice app optimized for mobile devices.",
+  "requestFramePermissions": ["microphone"]
+}

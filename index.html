@@ -1,13 +1,368 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>每日英语口语进阶</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 React 和 ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- 引入 Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
 
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ==========================================
+        // ！！！请在这里填入您的 Gemini API Key ！！！
+        // ==========================================
+        const GEMINI_API_KEY = "请将这行文字替换为您的真实API_KEY，保留双引号"; 
+
+        // 简单的 SVG 图标组件 (不再依赖外部库)
+        const Icons = {
+            mic: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>,
+            square: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>,
+            checkCircle: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
+            xCircle: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
+            chevronRight: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>,
+            chevronLeft: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>,
+            refreshCw: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>,
+            volume2: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>,
+            alertCircle: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,
+            bookOpen: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>,
+            headphones: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>,
+            messageCircle: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
+            eye: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
+            eyeOff: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+        };
+
+        const normalizeText = (text) => text.toLowerCase().replace(/[^\w\s]/g, '').trim();
+
+        function App() {
+            const [mode, setMode] = useState('daily');
+            const [level, setLevel] = useState('intermediate');
+            const [items, setItems] = useState([]);
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [loading, setLoading] = useState(false);
+            const [recording, setRecording] = useState(false);
+            const [transcript, setTranscript] = useState('');
+            const [result, setResult] = useState('none');
+            const [errorMsg, setErrorMsg] = useState(null);
+            const [isSpeechSupported, setIsSpeechSupported] = useState(true);
+            const [showText, setShowText] = useState(true);
+
+            const recognitionRef = useRef(null);
+
+            useEffect(() => {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    setIsSpeechSupported(false);
+                    return;
+                }
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'en-US';
+                recognition.interimResults = true;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => {
+                    setRecording(true);
+                    setTranscript('');
+                    setResult('none');
+                    setErrorMsg(null);
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech error', event.error);
+                    if (event.error !== 'no-speech') setErrorMsg(`识别错误: ${event.error}`);
+                    setRecording(false);
+                };
+                recognitionRef.current = recognition;
+                
+                if (GEMINI_API_KEY && GEMINI_API_KEY !== "请将这行文字替换为您的真实API_KEY，保留双引号") {
+                    loadContent();
+                } else {
+                    setErrorMsg("请先在代码中配置您的 Gemini API Key");
+                }
+            }, []);
+
+            useEffect(() => {
+                if (GEMINI_API_KEY && GEMINI_API_KEY !== "请将这行文字替换为您的真实API_KEY，保留双引号" && isSpeechSupported) {
+                    loadContent();
+                }
+            }, [mode, level]);
+
+            const loadContent = async () => {
+                setLoading(true);
+                setErrorMsg(null);
+                setItems([]);
+                setCurrentIndex(0);
+                setTranscript('');
+                setResult('none');
+                setShowText(mode !== 'listening');
+
+                try {
+                    let prompt = '';
+                    let schema = {};
+                    const levelText = level === 'intermediate' ? '中级(B1-B2)' : '高级(C1-C2)';
+
+                    if (mode === 'daily' || mode === 'listening') {
+                        prompt = `请生成8句适合【${levelText}】英语学习者的实用英语句子，并附带中文翻译。要求：1. 句子有一定的词汇和语法难度。2. 包含常见的生活、工作或学术场景。3. 返回JSON数组格式，包含 'en' 和 'zh' 两个字段。`;
+                        schema = {
+                            type: "ARRAY",
+                            items: { type: "OBJECT", properties: { en: { type: "STRING" }, zh: { type: "STRING" } }, required: ['en', 'zh'] }
+                        };
+                    } else if (mode === 'dialogue') {
+                        prompt = `请生成一段适合【${levelText}】英语学习者的情景对话。场景可以是：商务会议、旅行预订等。对话包含两个角色：A 和 B。共 6 到 8 个回合。返回JSON数组格式，每个元素代表一个回合，包含：'speaker'('A'或'B'), 'en'(英语台词), 'zh'(中文翻译)。`;
+                        schema = {
+                            type: "ARRAY",
+                            items: { type: "OBJECT", properties: { speaker: { type: "STRING" }, en: { type: "STRING" }, zh: { type: "STRING" } }, required: ['speaker', 'en', 'zh'] }
+                        };
+                    }
+
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    
+                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                        setItems(JSON.parse(data.candidates[0].content.parts[0].text));
+                    } else {
+                        throw new Error('No content generated');
+                    }
+                } catch (err) {
+                    console.error('Failed to load content:', err);
+                    setErrorMsg('加载失败，使用离线备用内容。');
+                    if (mode === 'dialogue') {
+                        setItems([
+                            { speaker: 'A', en: "Good morning. Thanks for joining the meeting.", zh: "早上好。感谢您参加会议。" },
+                            { speaker: 'B', en: "Good morning. It's my pleasure.", zh: "早上好。这是我的荣幸。" },
+                            { speaker: 'A', en: "Let's get straight to the point. Have you reviewed the Q3 financial report?", zh: "我们直奔主题吧。你审阅过第三季度的财务报告了吗？" },
+                            { speaker: 'B', en: "Yes, I have. The revenue growth is quite impressive.", zh: "是的，我看过了。收入增长非常令人瞩目。" }
+                        ]);
+                    } else {
+                        setItems([
+                            { en: "The rapid advancement of technology has significantly altered our daily lives.", zh: "科技的快速进步极大地改变了我们的日常生活。" },
+                            { en: "It is crucial to maintain a healthy work-life balance to prevent burnout.", zh: "保持健康的工作与生活平衡对于防止倦怠至关重要。" },
+                            { en: "Could you please elaborate on the main objectives of this project?", zh: "您能详细说明一下这个项目的主要目标吗？" },
+                            { en: "Despite the unexpected challenges, the team managed to meet the deadline.", zh: "尽管遇到了意想不到的挑战，团队还是设法赶上了截止日期。" }
+                        ]);
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const currentItemRef = useRef(null);
+            useEffect(() => { currentItemRef.current = items[currentIndex] || null; }, [items, currentIndex]);
+
+            const checkPronunciationRef = (spokenText) => {
+                const currentItem = currentItemRef.current;
+                if (!currentItem) return;
+                
+                const target = currentItem.en;
+                const normalizedSpoken = normalizeText(spokenText);
+                const normalizedTarget = normalizeText(target);
+
+                if (normalizedSpoken === normalizedTarget || normalizedSpoken.includes(normalizedTarget) || normalizedTarget.includes(normalizedSpoken)) {
+                    setResult('correct');
+                    if (mode === 'listening') setShowText(true);
+                } else {
+                    const spokenWords = normalizedSpoken.split(' ');
+                    const targetWords = normalizedTarget.split(' ');
+                    const matchCount = spokenWords.filter(w => targetWords.includes(w)).length;
+                    const matchRatio = matchCount / targetWords.length;
+
+                    if (matchRatio >= 0.7) {
+                        setResult('correct');
+                        if (mode === 'listening') setShowText(true);
+                    } else {
+                        setResult('incorrect');
+                    }
+                }
+            };
+
+            useEffect(() => {
+                if (recognitionRef.current) {
+                    recognitionRef.current.onresult = (event) => {
+                        let finalTranscript = '';
+                        let interimTranscript = '';
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                            else interimTranscript += event.results[i][0].transcript;
+                        }
+                        setTranscript(finalTranscript || interimTranscript);
+                        if (finalTranscript) {
+                            checkPronunciationRef(finalTranscript);
+                            recognitionRef.current.stop();
+                        }
+                    };
+                    recognitionRef.current.onend = () => {
+                        setRecording(false);
+                        setTranscript((prev) => { if (prev) checkPronunciationRef(prev); return prev; });
+                    };
+                }
+            }, [mode]);
+
+            const toggleRecording = () => {
+                if (!recognitionRef.current) return;
+                if (recording) recognitionRef.current.stop();
+                else {
+                    setTranscript(''); setResult('none'); setErrorMsg(null);
+                    try { recognitionRef.current.start(); } catch (e) { console.error(e); }
+                }
+            };
+
+            const playAudio = (text) => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const nextItem = () => {
+                if (currentIndex < items.length - 1) {
+                    setCurrentIndex(prev => prev + 1);
+                    setTranscript(''); setResult('none'); setErrorMsg(null);
+                    if (mode === 'listening') setShowText(false);
+                }
+            };
+
+            const prevItem = () => {
+                if (currentIndex > 0) {
+                    setCurrentIndex(prev => prev - 1);
+                    setTranscript(''); setResult('none'); setErrorMsg(null);
+                    if (mode === 'listening') setShowText(false);
+                }
+            };
+
+            if (!isSpeechSupported) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
+                            <span className="text-red-500 mx-auto mb-4 block w-16 h-16">{Icons.alertCircle}</span>
+                            <h1 className="text-2xl font-bold mb-2">不支持语音识别</h1>
+                            <p className="text-gray-600">请在 Android 设备上使用 Chrome 浏览器打开此应用。</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const currentItem = items[currentIndex];
+
+            return (
+                <div className="min-h-screen flex flex-col pb-20">
+                    <header className="bg-white shadow-sm px-4 py-4 flex items-center justify-between sticky top-0 z-10">
+                        <h1 className="text-xl font-bold text-indigo-600">英语口语进阶</h1>
+                        <div className="flex items-center space-x-2">
+                            <select value={level} onChange={(e) => setLevel(e.target.value)} className="bg-slate-100 text-sm rounded-lg px-2 py-1 outline-none">
+                                <option value="intermediate">中级</option>
+                                <option value="advanced">高级</option>
+                            </select>
+                            <div className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                                {items.length > 0 ? `${currentIndex + 1} / ${items.length}` : '0 / 0'}
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 flex flex-col items-center justify-center p-4 w-full max-w-2xl mx-auto">
+                        {loading ? (
+                            <div className="flex flex-col items-center space-y-4">
+                                <span className="text-indigo-500 animate-spin w-10 h-10">{Icons.refreshCw}</span>
+                                <p className="text-slate-500">正在生成内容...</p>
+                            </div>
+                        ) : items.length > 0 && currentItem ? (
+                            <div className="w-full flex flex-col items-center space-y-6">
+                                <div className="text-center text-slate-500 font-medium">
+                                    {mode === 'daily' && "朗读以下句子"}
+                                    {mode === 'listening' && "点击播放盲听，然后复述或回答"}
+                                    {mode === 'dialogue' && `情景对话 - 当前角色: ${currentItem.speaker}`}
+                                </div>
+
+                                <div className="bg-white w-full rounded-3xl shadow-sm border p-6 text-center relative min-h-[200px] flex flex-col justify-center">
+                                    <div className="absolute top-4 right-4 flex space-x-2">
+                                        {mode === 'listening' && (
+                                            <button onClick={() => setShowText(!showText)} className="p-2 text-slate-400 hover:text-indigo-500 bg-slate-50 rounded-full">
+                                                <span className="w-6 h-6 block">{showText ? Icons.eyeOff : Icons.eye}</span>
+                                            </button>
+                                        )}
+                                        <button onClick={() => playAudio(currentItem.en)} className="p-2 text-slate-400 hover:text-indigo-500 bg-slate-50 rounded-full">
+                                            <span className="w-6 h-6 block">{Icons.volume2}</span>
+                                        </button>
+                                    </div>
+                                    
+                                    {mode === 'dialogue' && currentItem.speaker && (
+                                        <div className={`text-sm font-bold mb-4 inline-block px-3 py-1 rounded-full self-center ${currentItem.speaker === 'A' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                                            Speaker {currentItem.speaker} {currentItem.speaker === 'A' ? '(请听)' : '(请朗读)'}
+                                        </div>
+                                    )}
+
+                                    {showText ? (
+                                        <>
+                                            <h2 className="text-2xl font-bold text-slate-800 mb-4 mt-4">{currentItem.en}</h2>
+                                            <p className="text-lg text-slate-500">{currentItem.zh}</p>
+                                        </>
+                                    ) : (
+                                        <div className="py-8"><span className="w-16 h-16 text-indigo-200 mx-auto mb-4 block">{Icons.headphones}</span><p className="text-slate-400">点击右上角听音，然后复述</p></div>
+                                    )}
+                                </div>
+
+                                <div className={`w-full rounded-2xl p-4 text-center min-h-[100px] flex flex-col justify-center ${result === 'correct' ? 'bg-emerald-50' : result === 'incorrect' ? 'bg-rose-50' : transcript ? 'bg-blue-50' : ''}`}>
+                                    {transcript ? (
+                                        <>
+                                            <p className="text-lg mb-2">"{transcript}"</p>
+                                            {result === 'correct' && <div className="text-emerald-600 font-bold flex items-center justify-center"><span className="w-5 h-5 mr-2 block">{Icons.checkCircle}</span>发音很棒！</div>}
+                                            {result === 'incorrect' && <div className="text-rose-600 font-bold flex items-center justify-center"><span className="w-5 h-5 mr-2 block">{Icons.xCircle}</span>再试一次吧</div>}
+                                        </>
+                                    ) : (
+                                        <p className="text-slate-400">{mode === 'dialogue' && currentItem.speaker === 'A' ? "点击喇叭听对方说话，然后点击右箭头继续" : "点击麦克风开始朗读"}</p>
+                                    )}
+                                    {errorMsg && <p className="text-rose-500 mt-2 text-sm">{errorMsg}</p>}
+                                </div>
+
+                                <div className="flex items-center justify-center space-x-8 w-full">
+                                    <button onClick={prevItem} disabled={currentIndex === 0} className="p-4 rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"><span className="w-8 h-8 block">{Icons.chevronLeft}</span></button>
+                                    <button onClick={toggleRecording} disabled={mode === 'dialogue' && currentItem.speaker === 'A'} className={`flex items-center justify-center w-20 h-20 rounded-full shadow-lg text-white ${(mode === 'dialogue' && currentItem.speaker === 'A') ? 'bg-slate-300' : recording ? 'bg-rose-500 scale-110' : 'bg-indigo-600'}`}>
+                                        {recording ? <span className="w-8 h-8 block">{Icons.square}</span> : <span className="w-8 h-8 block">{Icons.mic}</span>}
+                                    </button>
+                                    <button onClick={nextItem} disabled={currentIndex === items.length - 1} className="p-4 rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-30"><span className="w-8 h-8 block">{Icons.chevronRight}</span></button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center text-slate-500">
+                                <p>{errorMsg || "未能加载内容"}</p>
+                                <button onClick={loadContent} className="mt-4 px-6 py-2 bg-indigo-100 text-indigo-700 rounded-full">重试</button>
+                            </div>
+                        )}
+                    </main>
+
+                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-3 flex justify-around items-center z-20 pb-safe">
+                        <button onClick={() => setMode('daily')} className={`flex flex-col items-center space-y-1 ${mode === 'daily' ? 'text-indigo-600' : 'text-slate-400'}`}><span className="w-6 h-6 block">{Icons.bookOpen}</span><span className="text-xs">每日金句</span></button>
+                        <button onClick={() => setMode('listening')} className={`flex flex-col items-center space-y-1 ${mode === 'listening' ? 'text-indigo-600' : 'text-slate-400'}`}><span className="w-6 h-6 block">{Icons.headphones}</span><span className="text-xs">听力理解</span></button>
+                        <button onClick={() => setMode('dialogue')} className={`flex flex-col items-center space-y-1 ${mode === 'dialogue' ? 'text-indigo-600' : 'text-slate-400'}`}><span className="w-6 h-6 block">{Icons.messageCircle}</span><span className="text-xs">情景对话</span></button>
+                    </nav>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
